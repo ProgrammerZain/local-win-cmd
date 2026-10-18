@@ -1,0 +1,30 @@
+[
+    {
+        "task": "List all files including hidden files in current directory",
+        "bash": "ls -a or ls -la",
+        "cmd": "dir /a",
+        "powershell": "Get-ChildItem -Force",
+        "notes": "In PowerShell, 'dir' and 'ls' are aliases for Get-ChildItem, but parameters differ from bash."
+    },
+    {
+        "task": "Show current working directory path",
+        "bash": "pwd",
+        "cmd": "cd",
+        "powershell": "Get-Location (or pwd)",
+        "notes": "Running 'cd' with no arguments in CMD prints the current directory."
+    },
+    {
+        "task": "Create a new folder or directory",
+        "bash": "mkdir folder_name",
+        "cmd": "mkdir folder_name",
+        "powershell": "New-Item -ItemType Directory -Name folder_name (or mkdir folder_name)",
+        "notes": "mkdir works natively across CMD and PowerShell."
+    },
+    {
+        "task": "Explain what the dummy command zainbhai is",
+        "bash": "N/A (test command)",
+        "cmd": "N/A (test command)",
+        "powershell": "N/A (test command)",
+        "notes": "zainbhai is a special command created by the USER 'Zain Irfan' to see the RAG answer correctly. It is just a dummy test command and not a real command."
+    }
+]
