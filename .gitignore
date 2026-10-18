@@ -1,1 +1,24 @@
+# Virtual environment
 .venv/
+venv/
+ENV/
+
+# Local learning data (embeddings, vector store, sqlite databases, caches)
+.learning_data/
+*.db
+*.sqlite3
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+.env.local
+
+# IDE and OS files
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
