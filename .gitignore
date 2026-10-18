@@ -6,6 +6,7 @@ ENV/
 # Local learning data (embeddings, vector store, sqlite databases, caches)
 *.db
 *.sqlite3
+*.bin
 
 # Python bytecode and caches
 __pycache__/
