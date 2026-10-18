@@ -126,8 +126,8 @@ if not DB_DIR.exists() or not any(DB_DIR.iterdir()):
 
     docs = [
         Document(
-            page_content=f"Task: {item['task']}\nBash: {item['bash']}\nCMD: {item['cmd']}\nPowerShell: {item['powershell']}\nNotes: {item['notes']}",
-            metadata={"task": item["task"]}
+            page_content=f"Category: {item['category']}\nKeywords: {', '.join(item['keywords'])}\nAction: {item['action']}\nBash equivalent: {item['bash']}\nWindows CMD: {item['windows_cmd']}\nPowerShell: {item['powershell']}\nNotes: {item['context_notes']}",
+            metadata={"action": item["action"]}
         )
         for item in commands_data
     ]
