@@ -4,7 +4,6 @@ venv/
 ENV/
 
 # Local learning data (embeddings, vector store, sqlite databases, caches)
-.learning_data/
 *.db
 *.sqlite3
 
