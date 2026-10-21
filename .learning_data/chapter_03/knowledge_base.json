@@ -1,0 +1,227 @@
+[
+  {
+    "id": "NET-001",
+    "title": "Wi-Fi connected but no internet access",
+    "category": "network",
+    "symptoms": [
+      "Windows shows connected to Wi-Fi but websites do not load",
+      "Internet access fails on one computer"
+    ],
+    "diagnosis": [
+      "Check whether other devices on the same network can access the internet.",
+      "If other devices also fail, investigate the router or internet service before changing the computer.",
+      "Run ipconfig /all and check whether the computer has a valid IP address, default gateway, and DNS servers.",
+      "Use ping to test the default gateway, then use nslookup to test name resolution."
+    ],
+    "resolution": [
+      "Reconnect to the Wi-Fi network and confirm that airplane mode is off.",
+      "If the IP configuration appears invalid and DHCP is used, try ipconfig /renew.",
+      "If IP connectivity works but DNS lookups fail, investigate the configured DNS server.",
+      "Record command output and the point where the test fails before making additional changes."
+    ],
+    "cautions": [
+      "Do not reset the router or change DNS settings until you have recorded the current configuration."
+    ],
+    "source_url": "https://support.microsoft.com/en-us/windows/fix-wi-fi-connection-issues-in-windows"
+  },
+  {
+    "id": "NET-002",
+    "title": "Troubleshoot DNS name resolution failures",
+    "category": "network",
+    "symptoms": [
+      "A website name cannot be resolved",
+      "A hostname fails while a known IP address is reachable"
+    ],
+    "diagnosis": [
+      "Run ipconfig /all and verify the configured DNS server addresses.",
+      "Use nslookup example.com to check whether the configured DNS server can resolve a name.",
+      "Compare a name lookup with a connectivity test to help separate DNS problems from basic network connectivity problems.",
+      "Check whether the problem affects one hostname, multiple external names, or internal names only."
+    ],
+    "resolution": [
+      "If the DNS cache may contain stale entries, run ipconfig /flushdns and repeat the lookup.",
+      "If the DNS server cannot be reached, investigate network connectivity and the configured DNS server.",
+      "If only an internal hostname fails, verify the correct DNS suffix and internal DNS records with the network administrator.",
+      "Keep the exact nslookup output for further diagnosis."
+    ],
+    "cautions": [
+      "A failed ping alone does not prove that a host is unavailable because ICMP may be blocked."
+    ],
+    "source_url": "https://learn.microsoft.com/windows-server/networking/dns/troubleshoot/troubleshoot-dns-client"
+  },
+  {
+    "id": "NET-003",
+    "title": "Investigate slow network connections",
+    "category": "network",
+    "symptoms": [
+      "Downloads are slow",
+      "Remote sessions lag",
+      "Network performance changes throughout the day"
+    ],
+    "diagnosis": [
+      "Check whether the slowdown affects one device or every device on the same network.",
+      "Compare performance over Wi-Fi and wired Ethernet when both are available.",
+      "Use ping to observe latency and packet loss to a known reachable destination, remembering that some destinations deprioritize ICMP.",
+      "Use netstat -ano to inspect active connections and associated process IDs when investigating unexpected local network activity."
+    ],
+    "resolution": [
+      "Move closer to the wireless access point and retest if the issue appears limited to Wi-Fi.",
+      "Pause known bandwidth-heavy transfers and compare performance again.",
+      "Record the time, destination, connection type, and test results so intermittent issues can be compared.",
+      "Escalate recurring congestion or suspected network equipment faults with the collected evidence."
+    ],
+    "cautions": [
+      "Do not terminate a process solely because it appears in netstat; identify it first."
+    ],
+    "source_url": "https://support.microsoft.com/en-us/windows/fix-network-connection-issues-in-windows"
+  },
+  {
+    "id": "PRN-001",
+    "title": "Printer is online but documents remain queued",
+    "category": "printing",
+    "symptoms": [
+      "Print jobs remain pending",
+      "The printer is shown as online but nothing prints"
+    ],
+    "diagnosis": [
+      "Check the printer display for paper, toner, cover, or error indicators.",
+      "Open the Windows print queue and determine whether one stuck job is blocking later jobs.",
+      "Check that the selected printer is the intended device and that it is connected to the same network when using Wi-Fi.",
+      "If several users are affected, investigate the printer or shared print service rather than only the local application."
+    ],
+    "resolution": [
+      "Cancel a stuck job when appropriate and submit a small test page.",
+      "Power-cycle the printer only after confirming that no important job is in progress.",
+      "If the issue continues, use the Windows printer troubleshooter and check the Print Spooler service.",
+      "Record the printer model and any displayed error before reinstalling drivers."
+    ],
+    "cautions": [
+      "Clearing spooler files can remove queued print jobs; do not do this before confirming it is appropriate."
+    ],
+    "source_url": "https://support.microsoft.com/en-us/windows/hardware/printer/fix-printer-connection-and-printing-problems-in-windows"
+  },
+  {
+    "id": "PRN-002",
+    "title": "Windows printer appears offline",
+    "category": "printing",
+    "symptoms": [
+      "Windows reports that a printer is offline",
+      "Print jobs do not reach a network printer"
+    ],
+    "diagnosis": [
+      "Confirm the printer is powered on and shows no device-side error.",
+      "Check its USB, Ethernet, or Wi-Fi connection, depending on how it is connected.",
+      "For a network printer, verify that the PC and printer are connected to the expected network.",
+      "Open the print queue and inspect whether jobs are paused or blocked."
+    ],
+    "resolution": [
+      "Check the printer's status in Windows Settings under Printers & scanners.",
+      "Restart the printer and, if appropriate, restart the Print Spooler service.",
+      "Remove and reinstall the printer only after checking its connection and capturing any error details.",
+      "Print a test page to verify the result."
+    ],
+    "cautions": [
+      "Menu names vary slightly between Windows versions."
+    ],
+    "source_url": "https://support.microsoft.com/en-us/windows/hardware/printer/troubleshooting-offline-printer-problems-in-windows"
+  },
+  {
+    "id": "WIN-001",
+    "title": "Windows has insufficient free disk space",
+    "category": "windows-maintenance",
+    "symptoms": [
+      "Updates fail due to low storage",
+      "Applications cannot save files",
+      "The system drive is nearly full"
+    ],
+    "diagnosis": [
+      "Check available space on the system drive in Windows Settings under System and Storage.",
+      "Identify large personal files, temporary files, and applications that are no longer needed.",
+      "Check whether a large download, log file, or application cache is consuming unexpected space."
+    ],
+    "resolution": [
+      "Use Windows Storage settings or Disk Cleanup to review removable temporary files.",
+      "Move personal files to an appropriate storage location after confirming they are backed up.",
+      "Uninstall applications only when you know they are no longer required.",
+      "Recheck available space and retry the original operation."
+    ],
+    "cautions": [
+      "Do not manually delete unknown files from Windows or Program Files directories to free space."
+    ],
+    "source_url": "https://support.microsoft.com/en-us/windows/free-up-drive-space-in-windows"
+  },
+  {
+    "id": "WIN-002",
+    "title": "An application freezes or will not start",
+    "category": "application",
+    "symptoms": [
+      "A desktop application stops responding",
+      "An application closes during startup"
+    ],
+    "diagnosis": [
+      "Record the application name, version, exact error message, and whether the issue began after an update.",
+      "Restart the application and check whether other applications are also affected.",
+      "Check Windows Task Manager for an unresponsive process or unusually high CPU and memory use.",
+      "Check the application's own logs or Windows reliability information when available."
+    ],
+    "resolution": [
+      "Save any recoverable work before ending an unresponsive process.",
+      "Install updates from the application's official source if an update is indicated.",
+      "Use Windows app repair options when available before attempting a reset or reinstall.",
+      "If the issue began after a configuration change, test a reversible change and record the result."
+    ],
+    "cautions": [
+      "Do not end unfamiliar system processes or download replacement DLL files from unofficial sites."
+    ],
+    "source_url": "https://support.microsoft.com/en-us/windows"
+  },
+  {
+    "id": "SEC-001",
+    "title": "Respond to a suspicious email attachment",
+    "category": "security",
+    "symptoms": [
+      "An unexpected attachment arrives",
+      "A message asks the recipient to enable macros or urgently open a file"
+    ],
+    "diagnosis": [
+      "Check whether the sender and request were expected using a separate trusted communication channel.",
+      "Inspect the actual sender address and message context rather than trusting the display name alone.",
+      "Treat unexpected executable files, password-protected archives, and requests to enable macros as warning signs."
+    ],
+    "resolution": [
+      "Do not open the attachment or enable macros while its legitimacy is uncertain.",
+      "Report the message through the organization's approved security reporting process.",
+      "If the attachment was already opened, follow the organization's incident response process and contact IT support promptly.",
+      "Preserve the message for investigation according to organizational policy."
+    ],
+    "cautions": [
+      "Do not upload confidential company messages or attachments to public scanning services without authorization."
+    ],
+    "source_url": "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"
+  },
+  {
+    "id": "DEV-001",
+    "title": "A local Python application cannot connect to Ollama",
+    "category": "developer-tools",
+    "symptoms": [
+      "A Python app reports a connection error to localhost:11434",
+      "A local model request fails before generation"
+    ],
+    "diagnosis": [
+      "Run ollama list to confirm that the expected model is installed.",
+      "Confirm the Ollama application or service is running.",
+      "Check that the client is configured for the correct local Ollama endpoint, commonly http://localhost:11434.",
+      "Separate connection failures from model-not-found errors and errors returned after a request reaches the service."
+    ],
+    "resolution": [
+      "Start Ollama using the normal Windows application or service workflow.",
+      "Check the model name in the Python configuration against the output of ollama list.",
+      "Test a small request from the Ollama CLI before debugging the RAG retrieval pipeline.",
+      "Capture the full error message and identify whether the failure is at connection, model loading, embedding, or generation."
+    ],
+    "cautions": [
+      "Do not expose the local model service to an untrusted network just to resolve a localhost connection issue."
+    ],
+    "source_url": "https://ollama.com/docs"
+  }
+]

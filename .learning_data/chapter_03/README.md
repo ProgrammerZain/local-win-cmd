@@ -1,172 +1,128 @@
-# Chapter 3: Chunking, Retrieval Quality, and RAG Evaluation
+# Chapter 3 — Local IT Support Knowledge Assistant
 
-## 1. Learning Objectives
-* Understand how long documents are broken down into chunks using size and overlap.
-* Master similarity scores (cosine distance vs. similarity thresholds).
-* Prevent hallucinations by enforcing a minimum relevance threshold.
-* Build an automated, repeatable evaluation script to test RAG accuracy.
+This exercise turns RAG into a small, realistic IT help-desk knowledge assistant.
 
----
+## Why this dataset?
 
-## 2. Core Concepts to Master
+`knowledge_base.json` contains 8 short, structured support articles covering network connectivity, DNS, printers, disk space, application crashes, phishing, and local Ollama troubleshooting. The articles are concise enough for a laptop but rich enough to create multiple chunks and test similar symptoms across topics.
 
-### Why Chunking Matters
-LLMs have context window limits, and embeddings work best on focused passages. If an entire manual is embedded as one single vector, subtle details get blurred out.
+`knowledge_base.txt` is the same content in a readable text format. The Python script uses the JSON file so it can preserve article IDs, categories, titles, and source URLs as metadata.
 
-* **Chunk Size:** The number of characters or tokens in each segment (e.g. 500 characters).
-* **Chunk Overlap:** The number of characters shared between consecutive chunks (e.g. 50 characters). Overlap ensures that ideas crossing chunk boundaries aren't severed.
+The articles are original concise summaries with links to official documentation for further reading. Treat them as a learning dataset, not as a replacement for current vendor guidance.
 
-### Distance vs. Similarity Thresholds
-In vector search, distance measures dissimilarity:
-* **Distance = 0.0:** Exact match.
-* **Distance > 1.0 (or high):** Unrelated text.
+## Models you already have
 
-In Chapter 1, when you asked `what is the command zainbhai used for?` before adding it to the JSON, the retriever returned the hidden-files chunk anyway because `k=2` always returns the top 2 matches, regardless of relevance!
-By checking `similarity_search_with_score()`, you can say:
-> *"If the lowest distance is greater than 0.8, refuse to answer: no relevant documentation found."*
+Based on your `ollama list` output, use:
 
----
+- Embeddings: `nomic-embed-text`
+- Answer generation: `qwen2.5:3b`
 
-## 3. Architecture Overview
+These have separate jobs. The embedding model turns text and questions into vectors. The Qwen model writes the final answer from retrieved context.
 
-```mermaid
-flowchart TD
-    Doc[Long Markdown/Text Document] --> Splitter[RecursiveCharacterTextSplitter]
-    Splitter --> Chunks[Chunks with Overlap]
-    Chunks --> Embed[Embedding Model]
-    Embed --> VStore[(Persistent Vector Store)]
+## 1. Install the Python integrations
 
-    UserQuery[User Test Query] --> Search[Score-Aware Vector Search]
-    VStore --> Search
-    Search --> Check{Distance < Threshold?}
-    Check -->|Yes: Relevant| Augment[Build Prompt Context]
-    Check -->|No: Irrelevant| Refuse[Refuse: I don't know]
-    Augment --> LLM[Local Ollama LLM]
+From the repository root, using your existing virtual environment:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -U langchain-chroma langchain-ollama langchain-text-splitters
 ```
 
----
+No Hugging Face token is needed for this chapter because the embedding model is served locally by Ollama.
 
-## 4. Files You Will Create
-Inside `.learning_data/chapter_03/`:
-* `sample_manual.txt`: A multi-paragraph document describing Windows network commands (`ipconfig`, `netstat`, `ping`).
-* `evaluate_rag.py`: An automated script that tests 4 questions (3 valid, 1 out-of-scope) and checks whether the system answers correctly or refuses.
+## 2. Check Ollama models
 
----
-
-## 5. Step-by-Step Implementation Guide
-
-### Step 5.1: Create `sample_manual.txt`
-Create `.learning_data/chapter_03/sample_manual.txt` with several sections explaining network tools:
-```text
-# Windows Networking Guide
-
-## ipconfig
-The ipconfig command displays all current TCP/IP network configuration values.
-Running 'ipconfig /all' displays detailed configuration including DHCP and DNS servers.
-Running 'ipconfig /flushdns' purges the DNS Resolver cache.
-
-## ping
-The ping command verifies IP-level connectivity to another computer or domain.
-Usage: 'ping google.com' or 'ping 192.168.1.1'.
-In PowerShell, Test-Connection can also be used.
-
-## netstat
-The netstat command displays active TCP connections and listening ports.
-Usage: 'netstat -ano' displays all connections with process IDs (PID).
+```powershell
+ollama list
+ollama run nomic-embed-text "DNS troubleshooting"
 ```
 
-### Step 5.2: Create `evaluate_rag.py`
-Use `langchain_text_splitters.RecursiveCharacterTextSplitter` and `similarity_search_with_score`:
+If the second command is not supported by your Ollama CLI version, simply confirm the model is listed and continue. The Python application will request embeddings through Ollama.
 
-```python
-import time
-from pathlib import Path
-from langchain_chroma import Chroma
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.documents import Document
+Make sure Ollama is running before starting the script.
 
-try:
-    from langchain_huggingface import HuggingFaceEmbeddings
-except ImportError:
-    from langchain_community.embeddings import HuggingFaceEmbeddings
+## 3. Run the evaluator
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-DB_DIR = SCRIPT_DIR / "eval_store"
+From the repository root:
 
-# 1. Chunking with overlap
-with open(SCRIPT_DIR / "sample_manual.txt", "r", encoding="utf-8") as f:
-    raw_text = f.read()
-
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size=200,
-    chunk_overlap=40
-)
-docs = splitter.create_documents([raw_text])
-print(f"[INFO] Split document into {len(docs)} chunks.")
-
-# 2. Vector indexing
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-vector_store = Chroma.from_documents(docs, embeddings, persist_directory=str(DB_DIR))
-
-# 3. Test questions with expected outcome
-TEST_CASES = [
-    {"query": "How do I flush the DNS cache?", "should_find": True},
-    {"query": "Which command shows listening ports and PIDs?", "should_find": True},
-    {"query": "How do I make chocolate cake?", "should_find": False},  # Irrelevant query!
-]
-
-SIMILARITY_THRESHOLD = 0.9  # Distance threshold: above this is deemed irrelevant
-
-print("\nRunning Evaluation Suite:\n" + "=" * 50)
-for tc in TEST_CASES:
-    query = tc["query"]
-    results_with_scores = vector_store.similarity_search_with_score(query, k=1)
-    
-    doc, score = results_with_scores[0]
-    is_relevant = score <= SIMILARITY_THRESHOLD
-    status = "PASS" if is_relevant == tc["should_find"] else "FAIL"
-    
-    print(f"Query: '{query}'")
-    print(f"  Best Match Distance: {score:.4f}")
-    print(f"  Accepted as relevant: {is_relevant} (Expected: {tc['should_find']}) -> [{status}]\n")
+```powershell
+.\.venv\Scripts\python.exe .\.learning_data\chapter_03\evaluate_rag.py
 ```
 
----
-
-## 6. PowerShell Commands to Test
+If your launcher uses the current environment already, this may also work:
 
 ```powershell
 python .\.learning_data\chapter_03\evaluate_rag.py
 ```
 
----
+## 4. What the code does
 
-## 7. Expected Output
-```text
-Running Evaluation Suite:
-==================================================
-Query: 'How do I flush the DNS cache?'
-  Best Match Distance: 0.3821
-  Accepted as relevant: True (Expected: True) -> [PASS]
+1. Loads the eight articles from JSON.
+2. Converts each article into a LangChain `Document`, preserving article metadata.
+3. Splits documents into 650-character chunks with 100-character overlap.
+4. Creates or reuses a local Chroma index with cosine distance.
+5. Retrieves the top three chunks for each test question.
+6. Compares the best cosine distance to a configurable threshold.
+7. Generates an answer with `qwen2.5:3b` only when the retrieval result passes the threshold.
+8. Reports whether each in-scope/out-of-scope decision matched the expected result.
 
-Query: 'Which command shows listening ports and PIDs?'
-  Best Match Distance: 0.4109
-  Accepted as relevant: True (Expected: True) -> [PASS]
+The index is saved under `eval_store/`. A fingerprint checks the source data and chunk/model configuration. If they change, the index is rebuilt; otherwise the saved index is reused.
 
-Query: 'How do I make chocolate cake?'
-  Best Match Distance: 1.2842
-  Accepted as relevant: False (Expected: False) -> [PASS]
+## 5. Important: calibrate the threshold
+
+A distance score is not a universal confidence percentage. Lower cosine distance means closer vectors, but the useful threshold depends on the embedding model, data, chunking, and question.
+
+The default threshold is `0.55`. Treat it as a starting point, not a guaranteed correct value. Inspect the scores printed by your run. If relevant questions are refused or unrelated questions are accepted, try a different threshold and rerun.
+
+Set a temporary threshold in PowerShell:
+
+```powershell
+$env:RAG_DISTANCE_THRESHOLD = "0.65"
+.\.venv\Scripts\python.exe .\.learning_data\chapter_03\evaluate_rag.py
 ```
 
----
+Replace `0.65` with the value you want to test. Close the terminal or run `Remove-Item Env:RAG_DISTANCE_THRESHOLD` to remove the override.
 
-## 8. Verification Checklist
-- [ ] Created `sample_manual.txt` and `evaluate_rag.py`.
-- [ ] Observed chunk boundaries and overlap in action.
-- [ ] Validated that distance scores differentiate relevant CLI queries from unrelated questions.
-- [ ] Irrelevant queries successfully flagged as irrelevant without hallucination.
+## 6. Experiments
 
----
+1. Change `CHUNK_SIZE` from 650 to 300. Compare chunk count and retrieved article.
+2. Change `CHUNK_OVERLAP` from 100 to 0. Ask questions whose answer needs context from adjacent sentences.
+3. Add a ninth article about a problem you know well. Ask one direct question and one paraphrased question about it.
+4. Add a question about a topic absent from the knowledge base. Watch whether it is refused.
+5. Try thresholds such as `0.40`, `0.55`, and `0.70`. Record false accepts and false refusals.
+6. Temporarily change `GENERATION_MODEL` to `qwen2.5:1.5b` and compare answer quality and latency.
+7. Compare the TXT file to the JSON. Understand why structured records and metadata help with provenance and evaluation.
 
-## 9. Bridge to Chapter 4
-Now that you know how to chunk text and evaluate vector distance, how do you handle structured data like usernames, user permissions, and relational tables? That brings us to **Chapter 4: SQLite Fundamentals**.
+## 7. Limitations to notice
+
+- The evaluation's PASS/FAIL label checks the relevance/refusal decision. It does not prove the generated answer is factually correct.
+- A single best-chunk threshold can reject a useful answer or accept an irrelevant one. Later, you can evaluate multiple retrieved chunks, reranking, and more robust abstention.
+- The terminal demo sends one retrieved chunk to the LLM. Improving context assembly is a possible follow-up exercise.
+- The sample contains a small number of articles, not a comprehensive support corpus.
+- Do not run potentially destructive troubleshooting actions just because an LLM recommends them. This app only provides guidance; it does not execute commands.
+
+## 8. Troubleshooting
+
+### `Connection refused` or Ollama connection error
+Start the Ollama Windows application/service and retry.
+
+### `model not found`
+Run `ollama list` and ensure both `nomic-embed-text` and `qwen2.5:3b` are present. Use the exact model names listed there.
+
+### Import error for `langchain_ollama`
+Install `langchain-ollama` into the same virtual environment used to run the script.
+
+### Relevant questions are refused
+Inspect the printed cosine distance. Try a higher threshold and check the top retrieved article. A high distance can also indicate poor chunking or a missing article.
+
+### Unrelated questions are accepted
+Try a lower threshold. Do not assume a threshold alone guarantees safe refusal; use evaluation cases and review the actual retrieved text.
+
+## Completion checklist
+
+- [ ] Script loads all eight articles.
+- [ ] Chunk count is greater than the number of articles.
+- [ ] Re-running without data/config changes reuses the saved index.
+- [ ] Changing the source data or chunk settings rebuilds the index.
+- [ ] Relevant and out-of-scope query distances are visible.
+- [ ] Threshold behavior has been tested at several values.
+- [ ] I can explain why retrieval PASS does not guarantee a correct generated answer.
