@@ -41,78 +41,23 @@ Inside `.learning_data/chapter_07/`:
 
 ---
 
-## 5. Step-by-Step Implementation Guide
+## 5. Production Implementation Overview
 
-Create `.learning_data/chapter_07/traced_rag.py`:
+The complete production pipeline in `traced_rag.py` executes real vector embeddings, real Chroma DB queries, and local Ollama model generation with full telemetry:
 
-```python
-import time
-import json
-from dataclasses import dataclass, asdict
-
-@dataclass
-class RAGTrace:
-    stage_1_input: str = ""
-    stage_2_user_id: int = 0
-    stage_3_embed_duration_ms: float = 0.0
-    stage_4_raw_retrieved_count: int = 0
-    stage_5_auth_passed_count: int = 0
-    stage_5_best_distance: float = 0.0
-    stage_6_context_token_estimate: int = 0
-    stage_7_prompt_length: int = 0
-    stage_8_generation_duration_ms: float = 0.0
-    stage_9_final_status: str = "PENDING"
-
-def execute_with_trace(query: str, user_id: int):
-    trace = RAGTrace(stage_1_input=query, stage_2_user_id=user_id)
-    
-    # Stage 3: Simulated Query Embedding
-    t0 = time.perf_counter()
-    time.sleep(0.015)  # simulate embedding computation
-    trace.stage_3_embed_duration_ms = (time.perf_counter() - t0) * 1000
-
-    # Stage 4 & 5: Simulated Retrieval & Auth Filtering
-    # Example logic: User 1 owns docs, User 2 has none
-    if user_id == 1 and "hidden" in query.lower():
-        trace.stage_4_raw_retrieved_count = 1
-        trace.stage_5_auth_passed_count = 1
-        trace.stage_5_best_distance = 0.32
-    else:
-        trace.stage_4_raw_retrieved_count = 0
-        trace.stage_5_auth_passed_count = 0
-        trace.stage_5_best_distance = 1.45
-
-    if trace.stage_5_auth_passed_count == 0:
-        trace.stage_9_final_status = "REFUSED_NO_AUTHORIZED_CONTEXT"
-        return "I do not have authorized information to answer this.", trace
-
-    # Stage 6 & 7: Context & Prompt
-    context = "dir /a displays hidden files."
-    trace.stage_6_context_token_estimate = len(context.split())
-    prompt = f"Context: {context}\nQuestion: {query}"
-    trace.stage_7_prompt_length = len(prompt)
-
-    # Stage 8: Generation
-    t_gen = time.perf_counter()
-    time.sleep(0.05)  # simulate model call
-    trace.stage_8_generation_duration_ms = (time.perf_counter() - t_gen) * 1000
-    trace.stage_9_final_status = "SUCCESS"
-
-    return "Use 'dir /a' to see hidden files.", trace
-
-if __name__ == "__main__":
-    print("\nSimulating Traced Execution:\n" + "=" * 50)
-    
-    # Test 1: Successful Authorized Query
-    ans1, trace1 = execute_with_trace("How to view hidden files?", user_id=1)
-    print("Trace 1 (Success):")
-    print(json.dumps(asdict(trace1), indent=2))
-    
-    # Test 2: Unauthorized / Missing Data Query
-    ans2, trace2 = execute_with_trace("How to view hidden files?", user_id=2)
-    print("\nTrace 2 (Refused):")
-    print(json.dumps(asdict(trace2), indent=2))
-```
+1. **Stage 1 (Sanitization)**: Scans for secrets/API keys (`sk-...`, Bearer tokens, passwords) and scrubs them from the telemetry trace to maintain privacy.
+2. **Stage 2 (RBAC / Tenant Resolution)**: Maps user ID to role (`guest` < `dev` < `admin`).
+3. **Stage 3 (Embedding)**: Calls `all-MiniLM-L6-v2` and tracks exact embedding duration in milliseconds.
+4. **Stage 4 (Vector Retrieval)**: Retrieves raw top-$k$ nearest neighbors and records raw Euclidean distance.
+5. **Stage 5 (Authorization & Guardrail)**: Evaluates role level against document security clearance and enforces distance threshold (`< 1.25`).
+6. **Stage 6 (Context Packing)**: Packs authorized chunks into context, checking character and token budgets.
+7. **Stage 7 (Prompt Assembly)**: Assembles the prompt payload and logs payload size.
+8. **Stage 8 (Generation)**: Calls `qwen2.5:1.5b` via local Ollama, recording generation latency and token throughput (tokens/sec).
+9. **Stage 9 (Diagnostic Evaluation)**: Emits a structured `RAGTrace` and classifies execution into one of:
+   * `SUCCESS`: Grounded answer generated.
+   * `REFUSED_PERMISSION_DENIED`: Relevant knowledge exists in the vector store, but the active user role is not authorized.
+   * `REFUSED_RETRIEVAL_MISS`: Vector distance exceeded threshold; knowledge base has no relevant data.
+   * `MODEL_UNKNOWN_RESPONSE`: Context was provided, but model could not derive an answer.
 
 ---
 
